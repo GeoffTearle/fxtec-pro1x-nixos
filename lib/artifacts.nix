@@ -1,7 +1,9 @@
-{ hostPkgs, uboot, lib, nixosConfig }:
+{ hostPkgs, ubootBase, lib, nixosConfig }:
 
 let
   cfg = nixosConfig.config;
+  # U-Boot with as many previous-generation menu entries as pro1x.bootMenu.generations
+  uboot = ubootBase.override { previousGenerations = if cfg.pro1x.bootMenu.enable then cfg.pro1x.bootMenu.generations else 0; };
   toplevel = cfg.system.build.toplevel;
   params = import ./bootimg.nix;
 

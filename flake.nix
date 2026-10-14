@@ -33,7 +33,7 @@
         import ./lib/artifacts.nix {
           inherit lib nixosConfig;
           hostPkgs = nixpkgs.legacyPackages.${system};
-          uboot = if system == "x86_64-linux" then xc.pro1x-uboot else aarch64.pro1x-uboot;
+          ubootBase = if system == "x86_64-linux" then xc.pro1x-uboot else aarch64.pro1x-uboot;
         };
 
       # The example hosts. `<name>-xc` uses the cross-compiled kernel.
@@ -74,7 +74,8 @@
         sensors = ./modules/sensors.nix;
         usb-network = ./modules/usb-network.nix;
         boot-success = ./modules/boot-success.nix;
-        default.imports = with self.nixosModules; [ hardware audio camera keyboard modem sensors usb-network boot-success ];
+        boot-menu = ./modules/boot-menu.nix;
+        default.imports = with self.nixosModules; [ hardware audio camera keyboard modem sensors usb-network boot-success boot-menu ];
         # Use on x86_64 build machines: kernel cross-compiled instead of built natively
         # (or emulated). Without it the kernel is built natively for aarch64.
         cross-kernel.pro1x.kernelPackage = xc.pro1x-kernel;

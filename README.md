@@ -202,8 +202,9 @@ git add -A
 ```
 
 This builds on the PC, `nix copy`s the system to the phone, sets the profile and
-writes the U-Boot entry. Reboot to use it. Old generations stay in the U-Boot menu
-(hold volume-down at boot), so a bad update is recoverable. To reflash only the
+writes the U-Boot entry. Reboot to use it. The previous generations stay selectable from
+the U-Boot menu (hold volume-down at boot, then "Boot previous generation N"), so a bad
+update is recoverable. To reflash only the
 bootloader (first install, recovery): `nix build .#flash-uboot && ./result/bin/pro1x-flash-uboot`.
 
 ## Configuration
@@ -223,6 +224,7 @@ Options of this flake's modules:
 | `pro1x.sensors.enable` | off | ADSP sensors through hexagonrpcd + iio-sensor-proxy |
 | `pro1x.sensors.autostart` | off | start the sensor daemon at boot (it can hang the phone, try by hand first: `systemctl start pro1x-hexagonrpcd`) |
 | `pro1x.sensors.accelMountMatrix` | identity | fix auto-rotate direction, e.g. `"0, -1, 0; 1, 0, 0; 0, 0, 1"` |
+| `pro1x.bootMenu.generations` | 3 | previous generations listed in the U-Boot menu (0-9, 0 = none). Built into U-Boot: reflash it after changing (`nix build .#flash-uboot`). Keep it below `configurationLimit` |
 | `pro1x.encryption.enable` / `.bootSize` / `.allowDiscards` / `.debugShell` | off / 1024 / on / off | see above |
 
 ## Customizing
@@ -350,7 +352,7 @@ pro1x.serial.enable = true;   # USB serial console on the PC: screen /dev/ttyACM
 pro1x.verbose = true;         # debug UART + verbose logging
 ```
 
-Hold volume-down during boot for the U-Boot menu (old generations).
+Hold volume-down during boot for the U-Boot menu (previous generations).
 
 ## Other distros
 

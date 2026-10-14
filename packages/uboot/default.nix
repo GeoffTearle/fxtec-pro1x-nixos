@@ -1,4 +1,15 @@
-{ buildUBoot, xxd }:
+{ buildUBoot
+, xxd
+, lib
+  # Entries "Boot previous generation 1..N" in the U-Boot menu (see modules/boot-menu.nix)
+, previousGenerations ? 3
+}:
+let
+  n = previousGenerations;
+  entries = lib.concatMapStrings (i:
+    "bootmenu_${toString i}=Boot previous generation ${toString i}=sysboot scsi 0#userdata any \${scriptaddr} /boot/extlinux/prev${toString i}.conf; pause\n"
+  ) (lib.range 1 n);
+in
 (buildUBoot {
   version = "2026.10-rc-f8eb346";
 
@@ -24,6 +35,15 @@
     substituteInPlace board/qualcomm/qcom-phone.env \
       --replace-fail 'bootmenu_0=Boot=bootefi bootmgr; pause' \
       'bootmenu_0=Boot=sysboot scsi 0#userdata any ''${scriptaddr} /boot/extlinux/extlinux.conf; pause'
+
+    # Phone-friendly access to older generations: the extlinux menu is a typed
+    # prompt, so add fixed entries that load /boot/extlinux/prev<N>.conf (written
+    # by modules/boot-menu.nix). Entries after Boot are renumbered to stay contiguous.
+    ${lib.optionalString (n > 0) ''
+      perl -0pi -e 's/^bootmenu_(\d+)=/"bootmenu_".($1 >= 1 ? $1 + ${toString n} : $1)."="/gme' board/qualcomm/qcom-phone.env
+      printf '%s' ${lib.escapeShellArg entries} > prev-entries.txt
+      perl -0pi -e 'BEGIN { local $/; open F, "<prev-entries.txt" or die; $e = <F>; } s/^(bootmenu_${toString (n + 1)}=)/$e$1/m or die' board/qualcomm/qcom-phone.env
+    ''}
 
     # Bring-up fixes found on the Pro1X: USB gadget needs high-speed peripheral
     # mode + UTMI pipe clock (no SS PHY driver); UFS needs its GDSC.
