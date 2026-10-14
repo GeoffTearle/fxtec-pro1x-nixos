@@ -1,0 +1,44 @@
+diff --git a/hexagonrpcd/listener.c b/hexagonrpcd/listener.c
+index 5b3ba6e..7f2f71d 100644
+--- a/hexagonrpcd/listener.c
++++ b/hexagonrpcd/listener.c
+@@ -579,6 +579,31 @@ static int decline_request(uint32_t sc, uint32_t error, uint32_t *result,
+ 	return 0;
+ }
+ 
++
++/* Debug: show what the remote side sent to an interface we do not have. */
++static void probe_dump_request(uint32_t handle, uint32_t sc,
++			       const struct fastrpc_io_buffer *decoded)
++{
++	unsigned int i, j, n_in = REMOTE_SCALARS_INBUFS(sc);
++
++	fprintf(stderr, "PROBE handle=%u sc=%08x method=%u in=%u out=%u\n",
++			handle, sc, REMOTE_SCALARS_METHOD(sc), n_in,
++			REMOTE_SCALARS_OUTBUFS(sc));
++
++	for (i = 0; i < n_in && decoded != NULL; i++) {
++		const unsigned char *b = decoded[i].p;
++		size_t n = decoded[i].s > 96 ? 96 : decoded[i].s;
++
++		fprintf(stderr, "PROBE   in[%u] size=%zu:", i, decoded[i].s);
++		for (j = 0; j < n; j++)
++			fprintf(stderr, " %02x", b[j]);
++		fprintf(stderr, "  \"");
++		for (j = 0; j < n; j++)
++			fputc(b[j] >= 32 && b[j] < 127 ? b[j] : '.', stderr);
++		fprintf(stderr, "\"\n");
++	}
++}
++
+ static int invoke_requested_procedure(size_t n_ifaces,
+ 				      struct fastrpc_interface **ifaces,
+ 				      uint32_t handle,
+@@ -608,6 +633,7 @@ static int invoke_requested_procedure(size_t n_ifaces,
+ 	}
+ 
+ 	if (handle >= n_ifaces) {
++		probe_dump_request(handle, sc, decoded);
+ 		fprintf(stderr, "Unsupported handle: %u\n", handle);
+ 		return decline_request(sc, AEE_EUNSUPPORTED, result, returned);
+ 	}

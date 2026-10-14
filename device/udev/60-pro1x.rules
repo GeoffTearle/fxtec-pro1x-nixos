@@ -1,0 +1,8 @@
+# libcamera's software ISP allocates frame buffers from these dma-buf providers.
+SUBSYSTEM=="dma_heap", GROUP="video", MODE="0660"
+KERNEL=="udmabuf", GROUP="video", MODE="0660"
+# Vibration motor: feedbackd (group feedbackd) drives it.
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="aw86224-haptics", ENV{FEEDBACKD_TYPE}="vibra", GROUP="feedbackd", MODE="0660"
+# Keyboard slider switch (SW_KEYPAD_SLIDE, used by SXMO's keyboard autorotate): readable by
+# the input group, and with a stable name because the eventN number changes between boots.
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="gpio-keys", GROUP="input", MODE="0660", SYMLINK+="input/pro1x-slider"
