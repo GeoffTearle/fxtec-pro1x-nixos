@@ -25,7 +25,7 @@ Headphones                      Works   headset jack detection untested
 Microphones                     Works
 Calls                           Works   UCM "Voice Call" verb + q6voice kernel driver
 SMS                             Works
-Mobile data                     Untested
+Mobile data                     Works
 GPS                             Untested
 Rear camera (IMX582)            Works   12 MP, autofocus; no 48 MP mode
 Front camera (S5K4H7)           Works
