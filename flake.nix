@@ -73,7 +73,8 @@
         modem = ./modules/modem.nix;
         sensors = ./modules/sensors.nix;
         usb-network = ./modules/usb-network.nix;
-        default.imports = with self.nixosModules; [ hardware audio camera keyboard modem sensors usb-network ];
+        boot-success = ./modules/boot-success.nix;
+        default.imports = with self.nixosModules; [ hardware audio camera keyboard modem sensors usb-network boot-success ];
         # Use on x86_64 build machines: kernel cross-compiled instead of built natively
         # (or emulated). Without it the kernel is built natively for aarch64.
         cross-kernel.pro1x.kernelPackage = xc.pro1x-kernel;
