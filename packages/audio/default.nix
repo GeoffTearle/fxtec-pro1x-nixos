@@ -1,4 +1,4 @@
-{ lib, stdenv, makeWrapper, alsa-lib, alsa-utils, pipewire, pulseaudio, gawk, coreutils, util-linux, systemd }:
+{ lib, stdenv, makeWrapper, alsa-lib, alsa-utils, pipewire, pulseaudio, gawk, coreutils, util-linux, systemd, modemmanager }:
 
 stdenv.mkDerivation {
   pname = "pro1x-audio";
@@ -21,7 +21,7 @@ stdenv.mkDerivation {
     install -m755 pro1x-voicepcm $out/bin/
     for s in pro1x-audio-init pro1x-voice-call; do
       install -m755 $s $out/bin/$s
-      wrapProgram $out/bin/$s --prefix PATH : ${lib.makeBinPath [ alsa-utils pipewire pulseaudio gawk coreutils util-linux systemd ]}:$out/bin
+      wrapProgram $out/bin/$s --prefix PATH : ${lib.makeBinPath [ alsa-utils pipewire pulseaudio gawk coreutils util-linux systemd modemmanager ]}:$out/bin
     done
     cp -r --no-preserve=mode ucm2/. $out/share/alsa/ucm2/
     cp wireplumber.conf.d/*.conf $out/share/wireplumber/wireplumber.conf.d/

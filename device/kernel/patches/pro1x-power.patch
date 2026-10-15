@@ -113,7 +113,7 @@ new file mode 100644
 index 000000000..e7eada49d
 --- /dev/null
 +++ b/drivers/power/supply/pro1x-adc-battery.c
-@@ -0,0 +1,566 @@
+@@ -0,0 +1,585 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Battery state of charge for the F(x)tec Pro1X (PMI632).
@@ -156,6 +156,9 @@ index 000000000..e7eada49d
 +#define ANCHOR_POLLS		24	/* OCV pulls the charge count with a 2 minute time constant */
 +#define ANCHOR_MAX_UA_DISCH	400000	/* ... when the discharge current is below this */
 +#define ANCHOR_MAX_UA_CHG	200000	/* ... or the charge current is below this */
++#define ANCHOR_POLLS_LOAD	96	/* above that, up to ANCHOR_LOAD_MAX_UA: a slower pull (8 minutes) */
++#define ANCHOR_LOAD_MAX_UA	1500000	/* (the idle current with the screen on is already 400-500 mA) */
++#define REANCHOR_RETRY_POLLS	36	/* after a long sleep keep trying to re-anchor for this long */
 +#define GAP_MS			(3 * POLL_MS)	/* longer than this between polls: suspended */
 +#define LONG_GAP_MS		120000	/* only a sleep this long resets the filters / re-anchors */
 +#define GAP_REANCHOR_MAX_UA	600000	/* hard re-anchor after a gap if the current is below this */
@@ -222,6 +225,7 @@ index 000000000..e7eada49d
 +	ktime_t last_t;
 +	bool have_t;
 +	bool notify_pending;
++	unsigned int reanchor_left;	/* polls left to re-anchor after a long sleep */
 +	unsigned long last_notify;
 +
 +	int cap;		/* reported (%), -1 until the first sample */
@@ -377,6 +381,7 @@ index 000000000..e7eada49d
 +			dt_ms = 0;
 +			if (gap_ms >= LONG_GAP_MS) {
 +				long_gap = true;
++				b->reanchor_left = REANCHOR_RETRY_POLLS;
 +				b->filt_valid = false;
 +				b->win_n = 0;
 +				b->win_pos = 0;
@@ -429,10 +434,24 @@ index 000000000..e7eada49d
 +
 +		/* the OCV estimate corrects the count, but only where it is reliable */
 +		max_anchor_ua = charging ? ANCHOR_MAX_UA_CHG : ANCHOR_MAX_UA_DISCH;
-+		if (long_gap && !charging && abs(b->i_f) < GAP_REANCHOR_MAX_UA)
-+			b->q_uah = est_q;
-+		else if (abs(b->i_f) < max_anchor_ua && est > 0)
++		if (charging)
++			b->reanchor_left = 0;
++		if (b->reanchor_left) {
++			/*
++			 * After a long sleep the count missed everything drawn meanwhile.
++			 * The first polls after the wake-up run under its load, so keep
++			 * trying until the current is low enough to trust the OCV.
++			 */
++			b->reanchor_left--;
++			if (b->win_n >= 3 && abs(b->i_f) < GAP_REANCHOR_MAX_UA) {
++				b->q_uah = est_q;
++				b->reanchor_left = 0;
++			}
++		} else if (abs(b->i_f) < max_anchor_ua && est > 0) {
 +			b->q_uah += div_s64(est_q - b->q_uah, ANCHOR_POLLS);
++		} else if (!charging && abs(b->i_f) < ANCHOR_LOAD_MAX_UA && est > 0) {
++			b->q_uah += div_s64(est_q - b->q_uah, ANCHOR_POLLS_LOAD);
++		}
 +	}
 +
 +	if (full)

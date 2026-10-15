@@ -27,6 +27,8 @@ esac
 echo $$ >"$pidfile"
 kp=""
 cur=""
+vp=""
+sig=""
 pick() { pactl list short "$1" | awk -v pat="$2" '$2 ~ pat && $2 !~ /monitor/ { print $2; exit }'; }
 
 start_keepers() {
@@ -53,15 +55,70 @@ alive() {
   for p in $kp; do kill -0 $p 2>/dev/null || return 1; done
   [ "$cur" = "$(pick sinks 'platform-sound.*Voice_Call') $(pick sources 'platform-sound.*Voice_Call')" ]
 }
-pro1x-voicepcm &
-vp="$!"
-trap 'stop_keepers; kill $vp 2>/dev/null; rm -f "$pidfile"; exit 0' TERM INT
 
-while kill -0 $vp 2>/dev/null; do
+# The DSP voice session (pro1x-voicepcm) is tied to the call: it was found to work when
+# it starts while a call exists and not when it was started beforehand (the same order
+# as postmarketOS' q6voiced). So it is started when ModemManager reports a new call and
+# stopped when the last one is over. The codec keep-alive streams run for as long as the
+# profile is active. PRO1X_VOICE_ALWAYS=1 (or no mmcli) starts it right away instead.
+calls() { # object paths of the calls that are not over, on one line
+  mmcli -m any --voice-list-calls 2>/dev/null |
+    awk '/\((dialing|ringing-in|ringing-out|active|held|waiting)\)/ { print $1 }' | sort | tr '\n' ' '
+}
+
+start_pcm() {
+  pro1x-voicepcm &
+  vp="$!"
+  echo "voice session started"
+}
+
+stop_pcm() {
+  if [ -n "$vp" ]; then
+    kill "$vp" 2>/dev/null
+    wait "$vp" 2>/dev/null
+    echo "voice session stopped"
+  fi
+  vp=""
+}
+
+trap 'stop_keepers; stop_pcm; rm -f "$pidfile"; exit 0' TERM INT
+
+always=0
+if [ "${PRO1X_VOICE_ALWAYS:-0}" = 1 ] || ! command -v mmcli >/dev/null 2>&1; then
+  always=1
+fi
+
+while :; do
   if ! alive; then
     stop_keepers
     sleep 1
     start_keepers || true
+  fi
+
+  if [ "$always" = 1 ]; then
+    now=always
+  else
+    now=$(calls)
+  fi
+
+  added=0
+  for c in $now; do
+    case " $sig " in *" $c "*) ;; *) added=1 ;; esac
+  done
+  if [ "$added" = 1 ]; then
+    stop_pcm
+    start_pcm # a new call: (re)start the session
+  elif [ -z "$now" ] && [ -n "$vp" ]; then
+    stop_pcm # the last call ended
+  fi
+  sig=$now
+
+  if [ -n "$vp" ] && ! kill -0 "$vp" 2>/dev/null; then
+    wait "$vp" 2>/dev/null
+    vp=""
+    echo "voice session ended on its own"
+    # no PCM to open (q6voice missing): nothing more to do in the always mode
+    [ "$always" = 1 ] && exit 1
   fi
   sleep 1
 done
