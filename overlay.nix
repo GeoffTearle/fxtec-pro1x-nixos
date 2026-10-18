@@ -13,6 +13,11 @@ final: prev: {
       ./device/libcamera/s5k4h7-sensor.patch
       ./device/libcamera/imx582-sensor.patch
     ];
+    # Tuning files, looked up by sensor name (otherwise uncalibrated.yaml is used).
+    postInstall = (old.postInstall or "") + ''
+      install -Dm644 ${./device/libcamera/imx582.yaml} $out/share/libcamera/ipa/simple/imx582.yaml
+      install -Dm644 ${./device/libcamera/s5k4h7.yaml} $out/share/libcamera/ipa/simple/s5k4h7.yaml
+    '';
   });
 
   # phoc aborts on any switch that is neither lid nor tablet-mode, e.g. the keyboard
