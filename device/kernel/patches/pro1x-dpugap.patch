@@ -9,7 +9,7 @@ diff --git a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c b/drivers/gpu/drm/msm/d
  #include <linux/seq_file.h>
  
  #include <drm/drm_atomic.h>
-@@ -2738,7 +2739,43 @@
+@@ -2738,7 +2739,37 @@
  	dpu_crtc_frame_event_cb(dpu_enc->crtc, event);
  }
  
@@ -63,6 +63,7 @@ diff --git a/drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c b/drivers/gpu/drm/msm/dis
  
  		pipe_cfg->dst_rect = new_plane_state->dst;
  
++		/* Pro1X display top gap: everything is drawn lower, the rows above stay black */
 +		if (dpu_top_gap) {
 +			int off = min(dpu_top_gap, 400U) & ~1U;
 +
@@ -73,4 +74,3 @@ diff --git a/drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c b/drivers/gpu/drm/msm/dis
  		DPU_DEBUG_PLANE(pdpu, "checking src " DRM_RECT_FMT
  				" vs clip window " DRM_RECT_FMT "\n",
  				DRM_RECT_ARG(&pipe_cfg->src_rect),
-
