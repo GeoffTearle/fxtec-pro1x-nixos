@@ -24,6 +24,18 @@ in
     serial.enable = lib.mkEnableOption "USB serial gadget console (ttyGS0) for debugging";
 
     verbose = lib.mkEnableOption "verbose kernel/systemd logging and earlycon on the debug UART";
+
+    consoleRotation = lib.mkOption {
+      type = lib.types.nullOr (lib.types.enum [ 0 1 2 3 ]);
+      default = null;
+      example = 1;
+      description = ''
+        Rotate the text console (boot messages, TTY login) with fbcon=rotate:N:
+        0 normal (portrait), 1 clockwise, 2 upside down, 3 counter-clockwise.
+        Use 1 or 3 to read the console in landscape with the keyboard slid out; try
+        both, only one is right way up. Does not affect U-Boot or the desktop.
+      '';
+    };
   };
 
   config = {
@@ -82,7 +94,8 @@ in
       "ignore_loglevel"
       "systemd.log_level=debug"
     ]
-    ++ [ "console=tty1" ];
+    ++ [ "console=tty1" ]
+    ++ lib.optional (cfg.consoleRotation != null) "fbcon=rotate:${toString cfg.consoleRotation}";
 
     # The Pro1X userdata partition has 4096-byte sectors.
     fileSystems."/" = lib.mkDefault {
