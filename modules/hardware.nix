@@ -25,6 +25,29 @@ in
 
     verbose = lib.mkEnableOption "verbose kernel/systemd logging and earlycon on the debug UART";
 
+    display.topGap = lib.mkOption {
+      type = lib.types.ints.between 0 400;
+      default = 0;
+      example = 40;
+      description = ''
+        Leave this many lines at the top of the panel unused (black), e.g. to hide
+        rounded corners. Same mechanism as bottomGap.
+      '';
+    };
+
+    display.bottomGap = lib.mkOption {
+      type = lib.types.ints.between 0 400;
+      default = 0;
+      example = 60;
+      description = ''
+        Leave this many lines at the bottom of the panel unused (black; the desktop
+        gets 2160 minus topGap minus this many lines), e.g. to hide dead rows on a
+        replacement panel. The panel timing, and so the 60 Hz refresh, is unchanged.
+        Rounded down to an even number. Needs the panelgap kernel patch (a kernel
+        rebuild). The display controller moves the picture and fills the gaps with black.
+      '';
+    };
+
     consoleRotation = lib.mkOption {
       type = lib.types.nullOr (lib.types.enum [ 0 1 2 3 ]);
       default = null;
@@ -51,6 +74,7 @@ in
       deviceTree = {
         enable = true;
         name = "qcom/sm6115-fxtec-pro1x.dtb";
+        filter = "*sm6115-fxtec-pro1x*";
       };
       # Device firmware lives under qcom/sm6115/Fxtec/QX1050/ (matches the DTS).
       firmware = [ pkgs.pro1x-firmware ];
@@ -95,6 +119,14 @@ in
       "systemd.log_level=debug"
     ]
     ++ [ "console=tty1" ]
+    ++ lib.optionals (cfg.display.topGap != 0) [
+      "panel_boe_bf060y8m_aj0.top_gap=${toString cfg.display.topGap}"
+      "msm.display_top_gap=${toString cfg.display.topGap}"
+    ]
+    ++ lib.optionals (cfg.display.bottomGap != 0) [
+      "panel_boe_bf060y8m_aj0.bottom_gap=${toString cfg.display.bottomGap}"
+      "msm.display_bottom_gap=${toString cfg.display.bottomGap}"
+    ]
     ++ lib.optional (cfg.consoleRotation != null) "fbcon=rotate:${toString cfg.consoleRotation}";
 
     # The Pro1X userdata partition has 4096-byte sectors.

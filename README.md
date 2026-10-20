@@ -224,9 +224,11 @@ Options of this flake's modules:
 | `pro1x.sensors.enable` | off | ADSP sensors through hexagonrpcd + iio-sensor-proxy |
 | `pro1x.sensors.autostart` | off | start the sensor daemon at boot (it can hang the phone, try by hand first: `systemctl start pro1x-hexagonrpcd`) |
 | `pro1x.sensors.accelMountMatrix` | identity | fix auto-rotate direction, e.g. `"0, -1, 0; 1, 0, 0; 0, 0, 1"` |
-| `pro1x.consoleRotation` | null | rotate the text console / TTY login: `1` or `3` for landscape with the keyboard out. |
+| `pro1x.consoleRotation` | null | rotate the text console / TTY login: `1` or `2` for landscape with the keyboard out. |
 | `pro1x.bootMenu.generations` | 3 | previous generations listed in the U-Boot menu (0-9, 0 = none). Built into U-Boot: reflash it after changing (`nix build .#flash-uboot`). Keep it below `configurationLimit` |
 | `pro1x.encryption.enable` / `.bootSize` / `.allowDiscards` / `.debugShell` | off / 1024 / on / off | see above |
+| `pro1x.display.bottomGap` | 0 | lines at the bottom of the panel left unused (0-400), workaround for as this display gets black dots on the edges overtime. Can be used for removing the rounded corners together with topGap. |
+| `pro1x.display.topGap` | 0 | lines at the top of the panel left unused (0-400). |
 
 ## Customizing
 

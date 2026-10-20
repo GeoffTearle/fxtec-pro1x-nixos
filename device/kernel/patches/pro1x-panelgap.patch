@@ -1,0 +1,40 @@
+diff --git a/drivers/gpu/drm/panel/panel-boe-bf060y8m-aj0.c b/drivers/gpu/drm/panel/panel-boe-bf060y8m-aj0.c
+--- a/drivers/gpu/drm/panel/panel-boe-bf060y8m-aj0.c
++++ b/drivers/gpu/drm/panel/panel-boe-bf060y8m-aj0.c
+@@ -186,15 +186,43 @@
+ 	.height_mm = 136, /* 136.08 mm */
+ };
+ 
++static unsigned int top_gap;
++module_param(top_gap, uint, 0444);
++MODULE_PARM_DESC(top_gap, "Lines at the top of the panel left unused (0-400, default 0)");
++
++static unsigned int bottom_gap;
++module_param(bottom_gap, uint, 0444);
++MODULE_PARM_DESC(bottom_gap, "Lines at the bottom of the panel left unused (0-400, default 0)");
++
++static unsigned int gap_lines(unsigned int gap)
++{
++	return min(gap, 400U) & ~1U;
++}
++
+ static int boe_bf060y8m_aj0_get_modes(struct drm_panel *panel,
+ 				      struct drm_connector *connector)
+ {
+ 	struct drm_display_mode *mode;
++	unsigned int gap = gap_lines(top_gap) + gap_lines(bottom_gap);
+ 
+ 	mode = drm_mode_duplicate(connector->dev, &boe_bf060y8m_aj0_mode);
+ 	if (!mode)
+ 		return -ENOMEM;
+ 
++	if (gap) {
++		/* vsync and vtotal stay put: the lines become front porch */
++		mode->vdisplay -= gap;
++		mode->height_mm = mode->height_mm * mode->vdisplay /
++				  boe_bf060y8m_aj0_mode.vdisplay;
++	}
++
+ 	drm_mode_set_name(mode);
+ 
+ 	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;

@@ -1,0 +1,75 @@
+diff --git a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c
+@@ -10,6 +10,7 @@
+ #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
+ #include <linux/debugfs.h>
+ #include <linux/kthread.h>
++#include <linux/moduleparam.h>
+ #include <linux/seq_file.h>
+ 
+ #include <drm/drm_atomic.h>
+@@ -2738,7 +2739,43 @@
+ 	dpu_crtc_frame_event_cb(dpu_enc->crtc, event);
+ }
+ 
++unsigned int dpu_top_gap;
++module_param_named(display_top_gap, dpu_top_gap, uint, 0444);
++MODULE_PARM_DESC(display_top_gap, "Rows at the top of the panel left black (0-400)");
++
++unsigned int dpu_bottom_gap;
++module_param_named(display_bottom_gap, dpu_bottom_gap, uint, 0444);
++MODULE_PARM_DESC(display_bottom_gap, "Rows at the bottom of the panel left black (0-400)");
++
++static int dpu_encoder_virt_atomic_check(struct drm_encoder *drm_enc,
++					 struct drm_crtc_state *crtc_state,
++					 struct drm_connector_state *conn_state)
++{
++	struct drm_display_mode *adj = &crtc_state->adjusted_mode;
++	unsigned int gap = (min(dpu_top_gap, 400U) & ~1U) +
++			   (min(dpu_bottom_gap, 400U) & ~1U);
++
++	if (!gap || drm_enc->encoder_type != DRM_MODE_ENCODER_DSI)
++		return 0;
++
++	/* The panel mode kept vsync/vtotal, so the gap sits in the front porch: give it back. */
++	if (adj->vdisplay + gap > adj->vsync_start)
++		return 0;
++
++	adj->vdisplay += gap;
++	drm_mode_set_crtcinfo(adj, 0);
++
++	return 0;
++}
++
+ static const struct drm_encoder_helper_funcs dpu_encoder_helper_funcs = {
++	.atomic_check = dpu_encoder_virt_atomic_check,
+ 	.atomic_mode_set = dpu_encoder_virt_atomic_mode_set,
+ 	.atomic_disable = dpu_encoder_virt_atomic_disable,
+ 	.atomic_enable = dpu_encoder_virt_atomic_enable,
+diff --git a/drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c b/drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c
+@@ -28,6 +28,8 @@
+ #include "dpu_vbif.h"
+ #include "dpu_plane.h"
+ 
++extern unsigned int dpu_top_gap;
++
+ #define DPU_DEBUG_PLANE(pl, fmt, ...) DRM_DEBUG_ATOMIC("plane%d " fmt,\
+ 		(pl) ? (pl)->base.base.id : -1, ##__VA_ARGS__)
+ 
+@@ -925,6 +927,14 @@
+ 
+ 		pipe_cfg->dst_rect = new_plane_state->dst;
+ 
++		if (dpu_top_gap) {
++			int off = min(dpu_top_gap, 400U) & ~1U;
++
++			pipe_cfg->dst_rect.y1 += off;
++			pipe_cfg->dst_rect.y2 += off;
++		}
++
+ 		DPU_DEBUG_PLANE(pdpu, "checking src " DRM_RECT_FMT
+ 				" vs clip window " DRM_RECT_FMT "\n",
+ 				DRM_RECT_ARG(&pipe_cfg->src_rect),

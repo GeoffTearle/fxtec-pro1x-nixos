@@ -8,6 +8,8 @@ let
     "touch" 
     "egpio"
     "dsi" # exactly 60 Hz panel link (fixes touch ghost events)
+    "panelgap" # top_gap/bottom_gap: shorter panel mode, for dead rows / rounded corners
+    "dpugap" # msm.display_top_gap/bottom_gap: full link timing, picture moved down, black gaps
     "audio" 
     "q6voice" 
     "camera" # CAMSS, S5K4H7 (front), IMX582 + DW9800 (rear)
