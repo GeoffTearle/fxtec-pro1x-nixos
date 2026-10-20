@@ -4,6 +4,15 @@
 # consoles, root filesystem, udev rules. Everything every host needs.
 let
   cfg = config.pro1x;
+
+  # The touchscreen reports over the whole 2160 rows, but with display.topGap/bottomGap
+  # the desktop only covers the rows in between, so map touches onto that area:
+  # y' = (y * 2160 - top) / (2160 - top - bottom) as a libinput calibration matrix.
+  even = g: g - lib.mod g 2;
+  gapTop = even cfg.display.topGap;
+  gapBottom = even cfg.display.bottomGap;
+  active = 2160 - gapTop - gapBottom;
+  touchMatrix = "1 0 0 0 ${toString (2160.0 / active)} ${toString (0.0 - gapTop * 1.0 / active)}";
 in
 {
   # Opt-in extras that need hooks in the boot path.
@@ -155,7 +164,11 @@ in
     };
 
     # dma-buf providers for the camera, haptics device for feedbackd.
-    services.udev.extraRules = builtins.readFile ../device/udev/60-pro1x.rules;
+    services.udev.extraRules = builtins.readFile ../device/udev/60-pro1x.rules
+      + lib.optionalString (gapTop + gapBottom != 0) ''
+        # Touch follows the display gap (pro1x.display.topGap / bottomGap)
+        ACTION!="remove", SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHSCREEN}=="1", ENV{LIBINPUT_CALIBRATION_MATRIX}="${touchMatrix}"
+      '';
     users.groups.feedbackd = { };
 
     system.stateVersion = lib.mkDefault "26.05";
