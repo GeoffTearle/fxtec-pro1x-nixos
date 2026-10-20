@@ -73,3 +73,4 @@ diff --git a/drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c b/drivers/gpu/drm/msm/dis
  		DPU_DEBUG_PLANE(pdpu, "checking src " DRM_RECT_FMT
  				" vs clip window " DRM_RECT_FMT "\n",
  				DRM_RECT_ARG(&pipe_cfg->src_rect),
+
