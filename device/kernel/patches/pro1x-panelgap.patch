@@ -1,7 +1,7 @@
 diff --git a/drivers/gpu/drm/panel/panel-boe-bf060y8m-aj0.c b/drivers/gpu/drm/panel/panel-boe-bf060y8m-aj0.c
 --- a/drivers/gpu/drm/panel/panel-boe-bf060y8m-aj0.c
 +++ b/drivers/gpu/drm/panel/panel-boe-bf060y8m-aj0.c
-@@ -186,15 +186,43 @@
+@@ -186,15 +186,36 @@
  	.height_mm = 136, /* 136.08 mm */
  };
  
