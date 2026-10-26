@@ -16,7 +16,7 @@ let
 in
 {
   # Opt-in extras that need hooks in the boot path.
-  imports = [ ./encryption.nix ];
+  imports = [ ./encryption.nix ./rootfs.nix ];
 
   options.pro1x = {
     kernelPackage = lib.mkOption {
@@ -141,7 +141,8 @@ in
     # The Pro1X userdata partition has 4096-byte sectors.
     fileSystems."/" = lib.mkDefault {
       device = "/dev/disk/by-label/nixos";
-      fsType = "ext4";
+      fsType = cfg.rootFilesystem;
+      options = lib.mkIf (cfg.rootMountOptions != [ ]) cfg.rootMountOptions;
       autoResize = true;
     };
 

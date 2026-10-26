@@ -7,14 +7,15 @@
 #   [ rest ]               the root filesystem image, encrypted with the volume key
 #
 # lib/artifacts.nix wraps this script and sets the PRO1X_* variables below. To try it by
-# hand, set them to a boot tree directory, a root ext4 image, a U-Boot boot.img and a vbmeta.
+# hand, set them to a boot tree directory, a root filesystem image, a U-Boot boot.img and
+# a vbmeta.
 #
 # Needs free disk space of about (boot size + root image) in $PRO1X_WORKDIR (default: the
 # current directory, not /tmp which may be RAM).
 set -euo pipefail
 
 : "${PRO1X_BOOT_TREE:?directory holding boot/ (extlinux + kernels)}"
-: "${PRO1X_ROOTFS:?root filesystem image (ext4)}"
+: "${PRO1X_ROOTFS:?root filesystem image (ext4 or btrfs)}"
 : "${PRO1X_UBOOT_IMG:?U-Boot boot.img}"
 : "${PRO1X_VBMETA:?vbmeta.img}"
 : "${PRO1X_BOOT_MIB:?size of the plain boot filesystem in MiB}"

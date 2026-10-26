@@ -61,7 +61,8 @@ in
     fileSystems = {
       "/" = lib.mkOverride 900 {
         device = "/dev/mapper/${name}";
-        fsType = "ext4";
+        fsType = config.pro1x.rootFilesystem;
+        options = lib.mkIf (config.pro1x.rootMountOptions != [ ]) config.pro1x.rootMountOptions;
         autoResize = true;
       };
       # The whole start of userdata, mounted for the bootloader installer. The filesystem

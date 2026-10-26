@@ -11,6 +11,11 @@ let
   # at the start of userdata (see modules/encryption.nix).
   encrypted = cfg.pro1x.encryption.enable or false;
 
+  rootFilesystem = cfg.pro1x.rootFilesystem or "ext4";
+
+  # Both image builders use it, so an ext4 and a btrfs image are interchangeable.
+  imageUuid = "44444444-4444-4444-8888-888888888888";
+
   # AVB image with verification disabled; ABL refuses unsigned images otherwise.
   vbmetaImg = hostPkgs.runCommand "vbmeta.img" { nativeBuildInputs = [ hostPkgs.python3 ]; } ''
     python3 ${../scripts/mkvbmeta.py} $out
@@ -32,18 +37,61 @@ let
       --output $out
   '';
 
-  rootfsImg = hostPkgs.callPackage "${hostPkgs.path}/nixos/lib/make-ext4-fs.nix" {
+  # With encryption /boot is a separate filesystem (bootTree below): the root only
+  # carries the empty mount point.
+  populateImageCommands =
+    if encrypted then "mkdir -p ./files/boot" else ''
+      mkdir -p ./files/boot
+      ${cfg.boot.loader.generic-extlinux-compatible.populateCmd} -c ${toplevel} -d ./files/boot
+    '';
+
+  sdClosureInfo = hostPkgs.buildPackages.closureInfo { rootPaths = [ toplevel ]; };
+
+  ext4Img = hostPkgs.callPackage "${hostPkgs.path}/nixos/lib/make-ext4-fs.nix" {
     storePaths = [ toplevel ];
     volumeLabel = "nixos";
+    uuid = imageUuid;
     compressImage = false;
-    # With encryption /boot is a separate filesystem (bootTree below): the root only
-    # carries the empty mount point.
-    populateImageCommands =
-      if encrypted then "mkdir -p ./files/boot" else ''
-        mkdir -p ./files/boot
-        ${cfg.boot.loader.generic-extlinux-compatible.populateCmd} -c ${toplevel} -d ./files/boot
-      '';
+    inherit populateImageCommands;
   };
+
+  # btrfs metadata is dup'd and there is no offline shrink to claw the slack back, so
+  # the image keeps 50% headroom; the first boot grows it to fill userdata.
+  btrfsImg = hostPkgs.runCommand "btrfs-fs.img"
+    {
+      nativeBuildInputs = with hostPkgs; [ btrfs-progs coreutils fakeroot libfaketime ];
+    } ''
+    (
+      mkdir -p ./files
+      ${populateImageCommands}
+    )
+
+    mkdir -p ./rootImage/nix/store
+    xargs -I % cp -a --reflink=auto % -t ./rootImage/nix/store/ < ${sdClosureInfo}/store-paths
+    (
+      GLOBIGNORE=".:.."
+      shopt -u dotglob
+      for f in ./files/*; do
+        cp -a --reflink=auto -t ./rootImage/ "$f"
+      done
+    )
+    cp ${sdClosureInfo}/registration ./rootImage/nix-path-registration
+
+    bytes=$(du -s -c -B 4096 --apparent-size ./rootImage | tail -1 | awk '{ print int($1 * 4096 * 1.5) }')
+    mebibyte=$(( 1024 * 1024 ))
+    if (( bytes % mebibyte )); then
+      bytes=$(( (bytes / mebibyte + 1) * mebibyte ))
+    fi
+    truncate -s "$bytes" $out
+
+    faketime -f "1970-01-01 00:00:01" fakeroot \
+      mkfs.btrfs -L nixos -U ${imageUuid} -r ./rootImage -f -d single -m dup $out
+
+    # An offline check like the ext4 builder's fsck; --readonly so it never repairs.
+    btrfs check --readonly $out
+  '';
+
+  rootfsImg = if rootFilesystem == "btrfs" then btrfsImg else ext4Img;
 
   # Contents of the plain boot filesystem of an encrypted install: boot/extlinux and
   # boot/nixos (U-Boot reads /boot/extlinux/extlinux.conf from the filesystem's root).

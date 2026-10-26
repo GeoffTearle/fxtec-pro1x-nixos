@@ -48,7 +48,7 @@ flake.nix               outputs: nixosModules, nixosConfigurations, packages, li
 overlay.nix             pro1x-kernel / -firmware / -uboot / -audio / -libcamera, patched phoc
 device/                 distro-independent: kernel patches + config, UCM, keyd, udev, libcamera, sensor files
 packages/               Nix packages (kernel, uboot, firmware, audio, cameractrl)
-modules/                NixOS modules (hardware, audio, camera, keyboard, modem, sensors, usb-network, encryption)
+modules/                NixOS modules (hardware, rootfs, audio, camera, keyboard, modem, sensors, usb-network, encryption)
 hosts/                  minimal (console + ssh) and phosh
 templates/host/         starter flake for your own configuration
 lib/                    boot image / flash script builders (mkArtifacts)
@@ -175,8 +175,9 @@ long as it runs on aarch64 with a Wayland or console stack. Keep these in it:
 - a user with a password or ssh key (`host-minimal` defines `nixos`/`nixos`, change it),
 - `pro1x.audio.enable`, `pro1x.modem.enable`, ... for the hardware you use.
 
-The rootfs is a plain ext4 image written to `userdata`; the first boot registers
-the closure in the Nix store and the root filesystem grows to fill the partition.
+The rootfs is a plain ext4 image (or btrfs, see `pro1x.rootFilesystem`) written to
+`userdata`; the first boot registers the closure in the Nix store and the root
+filesystem grows to fill the partition.
 
 ### Encrypted root
 
@@ -214,6 +215,7 @@ Options of this flake's modules:
 | Option | Default | |
 |---|---|---|
 | `pro1x.kernelPackage` | `pkgs.pro1x-kernel` | use your own kernel derivation |
+| `pro1x.rootFilesystem` | `"ext4"` | `"btrfs"` for a compressed root (`compress-force=zstd`); needs a reflash |
 | `pro1x.serial.enable` | off | USB serial console `ttyGS0` |
 | `pro1x.verbose` | off | earlycon on the debug UART, debug logging |
 | `pro1x.usbNetwork.enable` / `.address` | on / `172.16.42.1/24` | Ethernet over the USB gadget with a DHCP server |
